@@ -1,12 +1,11 @@
 {
-   "type": "postgres",
-   "host": "localhost",
-   "port": 5432,
-   "username": "test",
-   "password": "test",
-   "database": "test",
+   "type": "mongodb",
+   "url": "mongodb+srv://sharp7:fh2s@df48pa@cluster0-uil32.mongodb.net/jwt-example",
+   "useNewUrlParser": true,
+   "useUnifiedTopology": true,
    "synchronize": true,
    "logging": false,
+   "database": "jwt-example",
    "entities": [
       "src/entity/**/*.ts"
    ],
