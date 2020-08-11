@@ -1,27 +1,48 @@
 import "dotenv/config";
 import "reflect-metadata";
 import express from "express";
+import session from "express-session";
 import { ApolloServer } from "apollo-server-express";
+import connectRedis from "connect-redis";
 import { buildSchema } from "type-graphql";
-import { UserResolver } from "./UserResolver";
+import { UserResolver } from "./resolvers/UserResolver"
 import { createConnection } from "typeorm";
+import { redis } from "./redis";
 import cookieParser from "cookie-parser";
 import { verify } from "jsonwebtoken";
 import cors from "cors";
 import { User } from "./entity/User";
-import { sendRefreshToken } from "./sendRefreshToken";
-import { createAccessToken, createRefreshToken } from "./auth";
+import { sendRefreshToken } from "./auth/sendRefreshToken";
+import { createAccessToken, createRefreshToken } from "./auth/auth";
 
-(async () => {
+const main = async () => {
   const app = express();
+  const RedisStore = connectRedis(session);
+
   app.use(
     cors({
       origin: "http://localhost:8000",
       credentials: true
     })
   );
+  app.use(
+    session({
+      store: new RedisStore({
+        client: redis as any
+      }),
+      name: "qid",
+      secret: process.env.APP_SECRET!,
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 1000 * 60 * 60 * 24 * 7 * 365 // 7 years
+      }
+    })
+  );
+
   app.use(cookieParser());
-  app.get("/", (_req, res) => res.send("hello"));
   app.post("/refresh_token", async (req, res) => {
     const token = req.cookies.jid;
     if (!token) {
@@ -54,17 +75,17 @@ import { createAccessToken, createRefreshToken } from "./auth";
   });
 
   await createConnection();
-
   const apolloServer = new ApolloServer({
     schema: await buildSchema({
       resolvers: [UserResolver]
     }),
-    context: ({ req, res }) => ({ req, res })
+    context: ({ req, res }: any) => ({ req, res })
   });
-
   apolloServer.applyMiddleware({ app, cors: false });
 
   app.listen(4000, () => {
     console.log("express server started");
   });
-})();
+};
+
+main().catch(err => console.error(err));
