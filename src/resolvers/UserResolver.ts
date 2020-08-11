@@ -9,14 +9,12 @@ import {
   UseMiddleware,
   Int
 } from "type-graphql";
-import { hash, compare } from "bcryptjs";
 import { User } from "../entity/User";
 import { MyContext } from "../MyContext";
 import { createRefreshToken, createAccessToken } from "../auth/auth";
 import { isAuth } from "../auth/isAuth";
 import { sendRefreshToken } from "../auth/sendRefreshToken";
 import { getConnection } from "typeorm";
-import { verify } from "jsonwebtoken";
 
 @ObjectType()
 class LoginResponse {
@@ -28,10 +26,6 @@ class LoginResponse {
 
 @Resolver()
 export class UserResolver {
-  @Query(() => String)
-  hello() {
-    return "hi!";
-  }
 
   @Query(() => String)
   @UseMiddleware(isAuth)
@@ -46,22 +40,16 @@ export class UserResolver {
   }
 
   @Query(() => User, { nullable: true })
-  me(@Ctx() context: MyContext) {
-    const authorization = context.req.headers["authorization"];
-
-    if (!authorization) {
-      return null;
-    }
-
+  @UseMiddleware(isAuth)
+  me(@Ctx() { payload }: MyContext) {
     try {
-      const token = authorization.split(" ")[1];
-      const payload: any = verify(token, process.env.ACCESS_TOKEN_SECRET!);
-      return User.findOne(payload.userId);
+      return User.findOne(payload!.userId);
     } catch (err) {
       console.log(err);
       return null;
     }
   }
+
 
   @Mutation(() => Boolean)
   async logout(@Ctx() { res }: MyContext) {
@@ -70,31 +58,16 @@ export class UserResolver {
     return true;
   }
 
-  @Mutation(() => Boolean)
-  async revokeRefreshTokensForUser(@Arg("userId", () => Int) userId: number) {
-    await getConnection()
-      .getRepository(User)
-      .increment({ id: userId }, "tokenVersion", 1);
-
-    return true;
-  }
-
+  // elad
   @Mutation(() => LoginResponse)
+  @UseMiddleware(isAuth)
   async login(
-    @Arg("email") email: string,
-    @Arg("password") password: string,
-    @Ctx() { res }: MyContext
+    @Ctx() { res, payload }: MyContext
   ): Promise<LoginResponse> {
-    const user = await User.findOne({ where: { email } });
+    const user = await User.findOne({ where: { id: payload!.userId } });
 
     if (!user) {
       throw new Error("could not find user");
-    }
-
-    const valid = await compare(password, user.password);
-
-    if (!valid) {
-      throw new Error("bad password");
     }
 
     // login successful
@@ -107,22 +80,65 @@ export class UserResolver {
     };
   }
 
+  // elad
   @Mutation(() => Boolean)
   async register(
-    @Arg("email") email: string,
-    @Arg("password") password: string
+    @Arg("email") email: string
   ) {
-    const hashedPassword = await hash(password, 12);
-
     try {
       await User.insert({
-        email,
-        password: hashedPassword
+        email
       });
     } catch (err) {
       console.log(err);
       return false;
     }
+
+    return true;
+  }
+
+  @Mutation(() => Boolean)
+  @UseMiddleware(isAuth)
+  async assignRoom(
+    @Arg("roomCursor") roomCursor: string,
+    @Ctx() { payload }: MyContext
+  ) {
+    const user = await User.findOne({ where: { id: payload!.userId } });
+
+    if (!user) {
+      throw new Error("could not find user");
+    }
+
+    // user confirmed
+
+    try {
+      // user.roomCursor = roomCursor;
+      // await User.save(user);
+
+      await getConnection()
+        .createQueryBuilder()
+        .update(User)
+        .set({ roomCursor: roomCursor })
+        .where({ id: payload!.userId })
+        .execute();
+
+      //   await getConnection()
+      //   .getRepository(User).update(???)
+
+      return true;
+    } catch (err) {
+      console.log(err);
+      return false;
+    }
+
+    return true;
+  }
+
+  @Mutation(() => Boolean)
+  async revokeRefreshTokensForUser(@Arg("userId", () => Int) userId: number) {
+    await getConnection()
+      .getRepository(User)
+      .increment({ id: userId }, "tokenVersion", 1);
 
     return true;
   }
