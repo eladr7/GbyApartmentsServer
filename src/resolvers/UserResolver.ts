@@ -16,6 +16,12 @@ import { isAuth } from "../auth/isAuth";
 import { sendRefreshToken } from "../auth/sendRefreshToken";
 import { getConnection } from "typeorm";
 
+const getUserDetailsFromGoogle = (payload: any) => {
+    //
+    return {name: payload.name, email: payload.email};
+}
+
+
 @ObjectType()
 class LoginResponse {
   @Field()
@@ -61,41 +67,91 @@ export class UserResolver {
   // elad
   @Mutation(() => LoginResponse)
   @UseMiddleware(isAuth)
-  async login(
+  async signUp(
     @Ctx() { res, payload }: MyContext
   ): Promise<LoginResponse> {
     const user = await User.findOne({ where: { id: payload!.userId } });
 
     if (!user) {
-      throw new Error("could not find user");
+      // The user isn't registered, so register him.
+
+      // 1.  https://www.npmjs.com/package/react-google-login:  https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=YOUR_TOKEN_HERE
+      const userData = getUserDetailsFromGoogle(payload);
+      await User.insert({
+        email: userData.email,
+        name: userData.name
+      });
+      // const newUser = await User.insert({
+      //   email: userData.email,
+      //   name: userData.name
+      // });
+      // sendRefreshToken(res, createRefreshToken(newUser.raw));
+      // return {
+      //   accessToken: createAccessToken(newUser.raw),
+      //   user: newUser.raw
+      // };
+
+      const newUser = await User.findOne({ where: { email: userData.email } });
+      if (!newUser) {
+        throw new Error("could not find user");
+      }
+
+      sendRefreshToken(res, createRefreshToken(newUser));
+
+      return {
+        accessToken: createAccessToken(newUser),
+        user: newUser
+      };
+    } else {
+      // The user was already registered
+
+      sendRefreshToken(res, createRefreshToken(user));
+
+      return {
+        accessToken: createAccessToken(user),
+        user
+      };
     }
-
-    // login successful
-
-    sendRefreshToken(res, createRefreshToken(user));
-
-    return {
-      accessToken: createAccessToken(user),
-      user
-    };
   }
 
   // elad
-  @Mutation(() => Boolean)
-  async register(
-    @Arg("email") email: string
-  ) {
-    try {
-      await User.insert({
-        email
-      });
-    } catch (err) {
-      console.log(err);
-      return false;
-    }
+  // @Mutation(() => LoginResponse)
+  // @UseMiddleware(isAuth)
+  // async login(
+  //   @Ctx() { res, payload }: MyContext
+  // ): Promise<LoginResponse> {
+  //   const user = await User.findOne({ where: { id: payload!.userId } });
 
-    return true;
-  }
+  //   if (!user) {
+  //     throw new Error("could not find user");
+  //   }
+
+  //   // login successful
+
+  //   sendRefreshToken(res, createRefreshToken(user));
+
+  //   return {
+  //     accessToken: createAccessToken(user),
+  //     user
+  //   };
+  // }
+
+  // // elad
+  // @Mutation(() => Boolean)
+  // async register(
+  //   @Arg("email") email: string
+  // ) {
+  //   try {
+  //     await User.insert({
+  //       email
+  //     });
+  //   } catch (err) {
+  //     console.log(err);
+  //     return false;
+  //   }
+
+  //   return true;
+  // }
 
   @Mutation(() => Boolean)
   @UseMiddleware(isAuth)

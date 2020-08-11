@@ -31,7 +31,7 @@ const main = async () => {
         client: redis as any
       }),
       name: "qid",
-      secret: process.env.APP_SECRET!,
+      secret: process.env.GOOGLE_API_KEY!,
       resave: false,
       saveUninitialized: false,
       cookie: {
