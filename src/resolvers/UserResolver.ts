@@ -15,10 +15,25 @@ import { createRefreshToken, createAccessToken } from "../auth/auth";
 import { isAuth } from "../auth/isAuth";
 import { sendRefreshToken } from "../auth/sendRefreshToken";
 import { getConnection } from "typeorm";
+import { OAuth2Client } from 'google-auth-library';
 
-const getUserDetailsFromGoogle = (payload: any) => {
-    //
-    return {name: payload.name, email: payload.email};
+
+const getUserDetailsFromGoogle = async (client: OAuth2Client, token: any) => {
+  const ticket = await client.verifyIdToken({
+    idToken: token,
+    audience: process.env.GOOGLE_APP_ID,  // Specify the CLIENT_ID of the app that accesses the backend
+    // Or, if multiple clients access the backend:
+    //[CLIENT_ID_1, CLIENT_ID_2, CLIENT_ID_3]
+
+    // Expected audience for App Engine.
+    // expectedAudience: `/projects/your-project-number/apps/your-project-id`,
+  });
+
+  const payload: any = ticket.getPayload();
+  // const userid = payload['sub'];
+  // If request specified a G Suite domain:
+  // const domain = payload['hd'];
+  return { name: payload.name, email: payload.email };
 }
 
 
@@ -66,17 +81,21 @@ export class UserResolver {
 
   // elad
   @Mutation(() => LoginResponse)
-  @UseMiddleware(isAuth)
   async signUp(
-    @Ctx() { res, payload }: MyContext
+    @Ctx() { req, res, googleAuthClient }: MyContext
   ): Promise<LoginResponse> {
-    const user = await User.findOne({ where: { id: payload!.userId } });
+    const authorization = req.headers["authorization"];
+    if (!authorization) {
+      throw new Error("No sign-in google token");
+    }
+
+    const userData: any = getUserDetailsFromGoogle(googleAuthClient, authorization).catch(console.error);
+
+    const user = await User.findOne({ where: { email: userData.email } });
 
     if (!user) {
       // The user isn't registered, so register him.
 
-      // 1.  https://www.npmjs.com/package/react-google-login:  https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=YOUR_TOKEN_HERE
-      const userData = getUserDetailsFromGoogle(payload);
       await User.insert({
         email: userData.email,
         name: userData.name
@@ -113,7 +132,6 @@ export class UserResolver {
       };
     }
   }
-
   // elad
   // @Mutation(() => LoginResponse)
   // @UseMiddleware(isAuth)
