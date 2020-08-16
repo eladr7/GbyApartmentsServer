@@ -14,7 +14,7 @@ import { MyContext } from "../MyContext";
 import { createRefreshToken, createAccessToken } from "../auth/auth";
 import { isAuth } from "../auth/isAuth";
 import { sendRefreshToken } from "../auth/sendRefreshToken";
-import { getConnection } from "typeorm";
+import { getConnection, getMongoManager } from "typeorm";
 import { OAuth2Client } from 'google-auth-library';
 
 
@@ -33,6 +33,7 @@ const getUserDetailsFromGoogle = async (client: OAuth2Client, token: any) => {
   // const userid = payload['sub'];
   // If request specified a G Suite domain:
   // const domain = payload['hd'];
+
   return { name: payload.name, email: payload.email };
 }
 
@@ -48,12 +49,12 @@ class LoginResponse {
 @Resolver()
 export class UserResolver {
 
-  @Query(() => String)
-  @UseMiddleware(isAuth)
-  bye(@Ctx() { payload }: MyContext) {
-    console.log(payload);
-    return `your user id is: ${payload!.userId}`;
-  }
+  // @Query(() => String)
+  // @UseMiddleware(isAuth)
+  // bye(@Ctx() { payload }: MyContext) {
+  //   console.log(payload);
+  //   return `your user id is: ${payload!.userId}`;
+  // }
 
   @Query(() => [User])
   users() {
@@ -81,25 +82,36 @@ export class UserResolver {
 
   // elad
   @Mutation(() => LoginResponse)
-  async signUp(
-    @Ctx() { req, res, googleAuthClient }: MyContext
+  async signup(
+    @Arg("token") token: string,
+    @Ctx() { res, googleAuthClient }: MyContext
   ): Promise<LoginResponse> {
-    const authorization = req.headers["authorization"];
-    if (!authorization) {
-      throw new Error("No sign-in google token");
-    }
+    // const authorization = req.headers["authorization"];
+    // if (!authorization) {
+    //   throw new Error("No sign-in google token");
+    // }
 
-    const userData: any = getUserDetailsFromGoogle(googleAuthClient, authorization).catch(console.error);
-
+    const userData: any = await getUserDetailsFromGoogle(googleAuthClient, token).catch(console.error);
     const user = await User.findOne({ where: { email: userData.email } });
 
     if (!user) {
       // The user isn't registered, so register him.
+      try {
+        // const suka = await User.insert({
+        //   email: userData.email,
+        //   name: userData.name
+        // });
 
-      await User.insert({
-        email: userData.email,
-        name: userData.name
-      });
+        let newUserToCreate = new User();
+        newUserToCreate.email = userData.email;
+        newUserToCreate.name = userData.name;
+
+        const manager = getMongoManager();
+        await manager.save(newUserToCreate);
+      } catch (err) {
+        console.log("Failed creating user: " + err)
+      }
+
       // const newUser = await User.insert({
       //   email: userData.email,
       //   name: userData.name
@@ -116,14 +128,12 @@ export class UserResolver {
       }
 
       sendRefreshToken(res, createRefreshToken(newUser));
-
       return {
         accessToken: createAccessToken(newUser),
         user: newUser
       };
     } else {
       // The user was already registered
-
       sendRefreshToken(res, createRefreshToken(user));
 
       return {
@@ -204,8 +214,6 @@ export class UserResolver {
       console.log(err);
       return false;
     }
-
-    return true;
   }
 
   @Mutation(() => Boolean)

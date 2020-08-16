@@ -21,7 +21,7 @@ import { OAuth2Client } from 'google-auth-library';
 //process.env.GOOGLE_APP_ID
 // or better:
 // https://stackoverflow.com/questions/42405439/how-to-verify-google-auth-token-at-server-side-in-node-js
-// so instead googleAuthclient, i can add it like that and continue in the signUp method as usual but with
+// so instead googleAuthclient, i can add it like that and continue in the signup method as usual but with
 // req.app.authClient instead of googleAuthclient
 // var app = express();
 // var GoogleAuth = require('google-auth-library');
