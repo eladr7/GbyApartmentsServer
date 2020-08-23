@@ -16,6 +16,8 @@ import { sendRefreshToken } from "./auth/sendRefreshToken";
 import { createAccessToken, createRefreshToken } from "./auth/auth";
 import { OAuth2Client } from 'google-auth-library';
 
+const API_PORT = process.env.PORT || 4000;
+
 // import {OAuth2Client, GoogleAuth} from 'google-auth-library';
 // ?. https://www.npmjs.com/package/react-google-login:  https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=YOUR_TOKEN_HERE
 //process.env.GOOGLE_APP_ID
@@ -53,7 +55,8 @@ const main = async () => {
 
     app.use(
         cors({
-            origin: "http://localhost:8000",
+            // origin: "http://localhost:8000",
+            origin: "https://practical-panini-bac2b5.netlify.app",
             credentials: true
         })
     );
@@ -116,7 +119,7 @@ const main = async () => {
     });
     apolloServer.applyMiddleware({ app, cors: false });
 
-    app.listen(4000, () => {
+    app.listen(API_PORT, () => {
         console.log("express server started");
     });
 };

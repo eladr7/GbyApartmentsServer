@@ -1,5 +1,5 @@
 {
-   "name": "apartmentsServer",
+   "name": "apartments-server",
    "version": "0.0.1",
    "description": "Awesome project developed with TypeORM.",
    "devDependencies": {
@@ -19,6 +19,7 @@
    "dependencies": {
       "apollo-server-express": "^2.16.1",
       "bcryptjs": "^2.4.3",
+      "class-validator": "^0.12.2",
       "connect-redis": "^5.0.0",
       "cookie-parser": "^1.4.5",
       "cors": "^2.8.5",
@@ -27,14 +28,19 @@
       "express-session": "^1.17.1",
       "google-auth-library": "^6.0.6",
       "graphql": "^15.3.0",
+      "graphql-subscriptions": "^1.1.0",
+      "graphql-upload": "^11.0.0",
       "ioredis": "^4.17.3",
       "jsonwebtoken": "^8.5.1",
       "mongoose": "^5.9.28",
+      "pg": "^7.3.0",
       "reflect-metadata": "^0.1.10",
       "type-graphql": "^1.0.0-rc.3",
       "typeorm": "0.2.25"
    },
    "scripts": {
-      "start": "nodemon --exec ts-node src/index.ts"
+      "dev": "nodemon --exec ts-node src/index.ts",
+      "build": "tsc -b",
+      "img": "gcloud builds submit --tag gcr.io/group-event-fs-2020/apartments-server ."
    }
 }
