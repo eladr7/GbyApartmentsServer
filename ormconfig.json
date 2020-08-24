@@ -7,17 +7,17 @@
    "logging": false,
    "database": "jwt-example",
    "entities": [
-      "src/entity/**/*.ts"
+      "dist/src/entity/**/*.js"
    ],
    "migrations": [
-      "src/migration/**/*.ts"
+      "dist/src/migration/**/*.js"
    ],
    "subscribers": [
-      "src/subscriber/**/*.ts"
+      "dist/src/subscriber/**/*.js"
    ],
    "cli": {
-      "entitiesDir": "src/entity",
-      "migrationsDir": "src/migration",
-      "subscribersDir": "src/subscriber"
+      "entitiesDir": "dist/src/entity",
+      "migrationsDir": "dist/src/migration",
+      "subscribersDir": "dist/src/subscriber"
    }
 }
