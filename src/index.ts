@@ -79,7 +79,13 @@ const main = async () => {
 
     app.use(cookieParser());
     app.post("/refresh_token", async (req, res) => {
-        const token = req.cookies.jid;
+        const authorization = req.headers.authorization;
+        if (!authorization) {
+            return res.send({ ok: false, accessToken: "" });
+        }
+        const token = authorization.split(" ")[1];
+
+        // const token = req.cookies.jid;
         if (!token) {
             return res.send({ ok: false, accessToken: "" });
         }
@@ -104,9 +110,11 @@ const main = async () => {
             return res.send({ ok: false, accessToken: "" });
         }
 
-        sendRefreshToken(res, createRefreshToken(user));
+        const jid = createRefreshToken(user);
 
-        return res.send({ ok: true, accessToken: createAccessToken(user) });
+        sendRefreshToken(res, jid);
+
+        return res.send({ ok: true, accessToken: createAccessToken(user), jid: jid });
     });
 
     const authClient = new OAuth2Client(process.env.GOOGLE_APP_ID);

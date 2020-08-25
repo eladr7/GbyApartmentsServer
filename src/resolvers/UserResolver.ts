@@ -44,6 +44,8 @@ class LoginResponse {
   accessToken: string;
   @Field(() => User)
   user: User;
+  @Field(() => User)
+  jid: string;
 }
 
 @Resolver()
@@ -127,18 +129,27 @@ export class UserResolver {
         throw new Error("could not find user");
       }
 
-      sendRefreshToken(res, createRefreshToken(newUser));
+      const jid = createRefreshToken(newUser);
+
+      sendRefreshToken(res, jid);
+      // console.log(res)
+
       return {
         accessToken: createAccessToken(newUser),
-        user: newUser
+        user: newUser,
+        jid: jid
       };
     } else {
       // The user was already registered
-      sendRefreshToken(res, createRefreshToken(user));
+      const jid = createRefreshToken(user);
 
+      sendRefreshToken(res, jid);
+      console.log("The fucking jid is: " + jid)
+      // console.log(res)
       return {
         accessToken: createAccessToken(user),
-        user
+        user,
+        jid: jid
       };
     }
   }
