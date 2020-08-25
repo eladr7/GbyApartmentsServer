@@ -44,7 +44,7 @@ class LoginResponse {
   accessToken: string;
   @Field(() => User)
   user: User;
-  @Field(() => User)
+  @Field()
   jid: string;
 }
 
